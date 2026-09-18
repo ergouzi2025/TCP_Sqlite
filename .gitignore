@@ -1,0 +1,17 @@
+# Build outputs
+*.o
+*.out
+tcp_sqlite_server
+tcp_sqlite_server_arm
+
+# SQLite runtime files
+*.db
+*.db-shm
+*.db-wal
+
+# VS Code
+.vscode/
+
+# Temporary files
+*.log
+*~
