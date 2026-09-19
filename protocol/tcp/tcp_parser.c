@@ -1,18 +1,14 @@
 #include "tcp_parser.h"
 
-#include <stdlib.h>
-#include <string.h>
 #include <ctype.h>
 #include <errno.h>
+#include <stdlib.h>
+#include <string.h>
 
 
-#define TCP_PARSER_MAX_FIELDS  8
-#define TCP_PARSER_MAX_INPUT   256
+#define TCP_PARSER_MAX_FIELDS 8
+#define TCP_PARSER_MAX_INPUT 256
 
-
-/* ==============================
- * Internal Functions
- * ============================== */
 
 static char *trim(char *str)
 {
@@ -38,19 +34,13 @@ static char *trim(char *str)
 }
 
 
-static int split_fields(
-    char *input,
-    char **fields,
-    int max_fields
-)
+static int split_fields(char *input, char **fields, int max_fields)
 {
     int count = 0;
     char *token;
 
     token = strtok(input, ",");
-
     while (token != NULL) {
-
         if (count >= max_fields) {
             return -1;
         }
@@ -64,10 +54,7 @@ static int split_fields(
 }
 
 
-static int parse_double(
-    const char *str,
-    double *value
-)
+static int parse_double(const char *str, double *value)
 {
     char *end;
     double result;
@@ -90,10 +77,7 @@ static int parse_double(
 }
 
 
-static int parse_int(
-    const char *str,
-    int *value
-)
+static int parse_int(const char *str, int *value)
 {
     char *end;
     long result;
@@ -120,15 +104,7 @@ static int parse_int(
 }
 
 
-/* ==============================
- * Parse SENSOR Command
- * ============================== */
-
-static int parse_sensor(
-    char **fields,
-    int field_count,
-    tcp_command_t *command
-)
+static int parse_sensor(char **fields, int field_count, tcp_command_t *command)
 {
     if (field_count != 6) {
         return -1;
@@ -142,32 +118,21 @@ static int parse_sensor(
         return -1;
     }
 
-    strcpy(
-        command->data.sensor.device_id,
-        fields[1]
-    );
+    strcpy(command->data.sensor.device_id, fields[1]);
 
-    if (parse_double(
-            fields[2],
-            &command->data.sensor.data_1) < 0) {
+    if (parse_double(fields[2], &command->data.sensor.data_1) < 0) {
         return -1;
     }
 
-    if (parse_double(
-            fields[3],
-            &command->data.sensor.data_2) < 0) {
+    if (parse_double(fields[3], &command->data.sensor.data_2) < 0) {
         return -1;
     }
 
-    if (parse_double(
-            fields[4],
-            &command->data.sensor.data_3) < 0) {
+    if (parse_double(fields[4], &command->data.sensor.data_3) < 0) {
         return -1;
     }
 
-    if (parse_double(
-            fields[5],
-            &command->data.sensor.data_4) < 0) {
+    if (parse_double(fields[5], &command->data.sensor.data_4) < 0) {
         return -1;
     }
 
@@ -177,15 +142,7 @@ static int parse_sensor(
 }
 
 
-/* ==============================
- * Parse QUERY Command
- * ============================== */
-
-static int parse_query(
-    char **fields,
-    int field_count,
-    tcp_command_t *command
-)
+static int parse_query(char **fields, int field_count, tcp_command_t *command)
 {
     int start_id;
     int end_id;
@@ -224,14 +181,7 @@ static int parse_query(
 }
 
 
-/* ==============================
- * Public Interface
- * ============================== */
-
-int tcp_parser_parse(
-    const char *input,
-    tcp_command_t *command
-)
+int tcp_parser_parse(const char *input, tcp_command_t *command)
 {
     char buffer[TCP_PARSER_MAX_INPUT];
     char *fields[TCP_PARSER_MAX_FIELDS];
@@ -249,36 +199,21 @@ int tcp_parser_parse(
 
     memset(command, 0, sizeof(*command));
 
-    field_count = split_fields(
-        buffer,
-        fields,
-        TCP_PARSER_MAX_FIELDS
-    );
+    field_count = split_fields(buffer, fields, TCP_PARSER_MAX_FIELDS);
 
     if (field_count <= 0) {
         return -1;
     }
 
     if (strcmp(fields[0], "SENSOR") == 0) {
-
-        return parse_sensor(
-            fields,
-            field_count,
-            command
-        );
+        return parse_sensor(fields, field_count, command);
     }
 
     if (strcmp(fields[0], "QUERY") == 0) {
-
-        return parse_query(
-            fields,
-            field_count,
-            command
-        );
+        return parse_query(fields, field_count, command);
     }
 
     if (strcmp(fields[0], "HELP") == 0) {
-
         if (field_count != 1) {
             return -1;
         }

@@ -29,7 +29,7 @@ The project is organized as a small layered server:
 
 ## Project Structure
 
-//text
+```text
 TCP_Sqlite/
 ├── app/
 │   └── main.c

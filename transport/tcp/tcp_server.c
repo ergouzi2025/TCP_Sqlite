@@ -13,12 +13,7 @@
 #include <unistd.h>
 
 #define TCP_SERVER_BUFFER_SIZE 128
-#define TCP_SERVER_BACKLOG     5
-
-
-/* ==============================
- * Internal Structure
- * ============================== */
+#define TCP_SERVER_BACKLOG 5
 
 struct tcp_server {
     int server_fd;
@@ -33,104 +28,65 @@ struct tcp_server {
 };
 
 
-/* ==============================
- * Client Context
- * ============================== */
-
 typedef struct {
     tcp_server_t *server;
     int client_fd;
 } tcp_client_context_t;
 
 
-/* ==============================
- * Internal Functions
- * ============================== */
-
 static void *tcp_client_thread(void *arg)
 {
-    tcp_client_context_t *context =
-        (tcp_client_context_t *)arg;
+    tcp_client_context_t *context = (tcp_client_context_t *)arg;
 
     tcp_server_t *server = context->server;
     int client_fd = context->client_fd;
 
-char buffer[TCP_SERVER_BUFFER_SIZE];
+    char buffer[TCP_SERVER_BUFFER_SIZE];
+    free(context);
+    log_info("Client connected: fd=%d", client_fd);
 
-free(context);
+    /* Notify the upper layer that a client has connected. */
+    if (server->handler != NULL) {
+        int ret = server->handler(client_fd, TCP_CLIENT_CONNECTED, NULL, 0,
+                                  server->handler_arg);
 
-log_info("Client connected: fd=%d", client_fd);
-
-/* Notify upper layer that a client has connected. */
-if (server->handler != NULL) {
-    int ret = server->handler(
-        client_fd,
-        TCP_CLIENT_CONNECTED,
-        NULL,
-        0,
-        server->handler_arg
-    );
-
-    if (ret < 0) {
-        log_warn(
-            "Client connected handler returned error: fd=%d",
-            client_fd
-        );
+        if (ret < 0) {
+            log_warn(
+                "Client connected handler returned error: fd=%d",
+                client_fd
+            );
+        }
     }
-}
 
-while (server->running) {
+    while (server->running) {
 
-        ssize_t received = recv(
-            client_fd,
-            buffer,
-            sizeof(buffer) - 1,
-            0
-        );
+        ssize_t received = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
 
         if (received > 0) {
 
             buffer[received] = '\0';
 
-            log_info(
-                "Received %zd bytes from client fd=%d",
-                received,
-                client_fd
-            );
+            log_info("Received %zd bytes from client fd=%d", received, client_fd);
 
-        if (server->handler != NULL) {
+            if (server->handler != NULL) {
+                int ret = server->handler(client_fd, TCP_CLIENT_DATA, buffer,
+                                          (size_t)received, server->handler_arg);
 
-            int ret = server->handler(
-                client_fd,
-                TCP_CLIENT_DATA,
-                buffer,
-                (size_t)received,
-                server->handler_arg
-            );
-
-            if (ret < 0) {
-                log_warn(
-                    "Client data handler returned error: fd=%d",
-                    client_fd
-                );
+                if (ret < 0) {
+                    log_warn(
+                        "Client data handler returned error: fd=%d",
+                        client_fd
+                    );
+                }
             }
-        }
 
         } else if (received == 0) {
 
-            log_info(
-                "Client disconnected: fd=%d",
-                client_fd
-            );
+            log_info("Client disconnected: fd=%d", client_fd);
 
             if (server->handler != NULL) {
-                int ret = server->handler(
-                    client_fd,
-                    TCP_CLIENT_DISCONNECTED,
-                    NULL,
-                    0,
-                    server->handler_arg
-                );
+                int ret = server->handler(client_fd, TCP_CLIENT_DISCONNECTED,
+                                          NULL, 0, server->handler_arg);
 
                 if (ret < 0) {
                     log_warn(
@@ -148,11 +104,7 @@ while (server->running) {
                 continue;
             }
 
-            log_error(
-                "recv failed: fd=%d, error=%s",
-                client_fd,
-                strerror(errno)
-            );
+            log_error("recv failed: fd=%d, error=%s", client_fd, strerror(errno));
 
             break;
         }
@@ -166,33 +118,21 @@ while (server->running) {
 }
 
 
-/* ==============================
- * Public Functions
- * ============================== */
-
-tcp_server_t *tcp_server_create(
-    const char *ip,
-    int port
-)
+tcp_server_t *tcp_server_create(const char *ip, int port)
 {
     if (ip == NULL || port <= 0 || port > 65535) {
         log_error("Invalid TCP server parameters");
         return NULL;
     }
 
-    tcp_server_t *server =
-        calloc(1, sizeof(tcp_server_t));
+    tcp_server_t *server = calloc(1, sizeof(*server));
 
     if (server == NULL) {
         log_error("Failed to allocate tcp_server");
         return NULL;
     }
 
-    strncpy(
-        server->ip,
-        ip,
-        sizeof(server->ip) - 1
-    );
+    strncpy(server->ip, ip, sizeof(server->ip) - 1);
 
     server->ip[sizeof(server->ip) - 1] = '\0';
 
@@ -206,11 +146,7 @@ tcp_server_t *tcp_server_create(
 }
 
 
-int tcp_server_set_handler(
-    tcp_server_t *server,
-    tcp_client_handler_t handler,
-    void *arg
-)
+int tcp_server_set_handler(tcp_server_t *server, tcp_client_handler_t handler, void *arg)
 {
     if (server == NULL) {
         return -1;
@@ -235,10 +171,6 @@ int tcp_server_start(tcp_server_t *server)
     }
 
 
-    /* ==============================
-     * Create Socket
-     * ============================== */
-
     int server_fd = socket(
         AF_INET,
         SOCK_STREAM,
@@ -255,10 +187,6 @@ int tcp_server_start(tcp_server_t *server)
         return -1;
     }
 
-
-    /* ==============================
-     * SO_REUSEADDR
-     * ============================== */
 
     int reuse = 1;
 
@@ -279,10 +207,6 @@ int tcp_server_start(tcp_server_t *server)
         return -1;
     }
 
-
-    /* ==============================
-     * Bind
-     * ============================== */
 
     struct sockaddr_in server_addr;
 
@@ -329,10 +253,6 @@ int tcp_server_start(tcp_server_t *server)
     }
 
 
-    /* ==============================
-     * Listen
-     * ============================== */
-
     if (listen(
             server_fd,
             TCP_SERVER_BACKLOG) < 0) {
@@ -357,10 +277,6 @@ int tcp_server_start(tcp_server_t *server)
         server->port
     );
 
-
-    /* ==============================
-     * Accept Loop
-     * ============================== */
 
     while (server->running) {
 
@@ -409,10 +325,6 @@ int tcp_server_start(tcp_server_t *server)
             client_fd
         );
 
-
-        /* ==============================
-         * Create Client Thread
-         * ============================== */
 
         tcp_client_context_t *context =
             malloc(sizeof(tcp_client_context_t));
@@ -511,11 +423,7 @@ void tcp_server_destroy(tcp_server_t *server)
     log_info("TCP server destroyed");
 }
 
-int tcp_server_send(
-    int client_fd,
-    const char *data,
-    size_t length
-)
+int tcp_server_send(int client_fd, const char *data, size_t length)
 {
     if (client_fd < 0 ||
         data == NULL ||

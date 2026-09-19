@@ -5,30 +5,11 @@
 
 #include "storage/sqlite/sqlite_db.h"
 
-
-/* ==============================
- * Data Service
- * ============================== */
-
 typedef struct data_service data_service_t;
 
+data_service_t *data_service_create(sqlite_db_t *db);
 
-/* ==============================
- * Lifecycle
- * ============================== */
-
-data_service_t *data_service_create(
-    sqlite_db_t *db
-);
-
-void data_service_destroy(
-    data_service_t *service
-);
-
-
-/* ==============================
- * Data Information
- * ============================== */
+void data_service_destroy(data_service_t *service);
 
 /**
  * @brief Get the current sensor data ID range.
@@ -39,16 +20,7 @@ void data_service_destroy(
  *
  * @return 0 on success, -1 on failure.
  */
-int data_service_get_id_range(
-    data_service_t *service,
-    int *min_id,
-    int *max_id
-);
-
-
-/* ==============================
- * Data Query
- * ============================== */
+int data_service_get_id_range(data_service_t *service, int *min_id, int *max_id);
 
 /**
  * @brief Query the next batch of sensor data.
@@ -70,16 +42,5 @@ int data_service_get_id_range(
  *
  * @return 0 on success, -1 on failure.
  */
-int data_service_query_next_batch(
-    data_service_t *service,
-    int last_id,
-    int end_id,
-    char *buffer,
-    size_t buffer_size,
-    int *next_id,
-    int *row_count,
-    int is_first_batch
-);
-
-
+int data_service_query_next_batch(data_service_t *service, int last_id, int end_id, char *buffer, size_t buffer_size, int *next_id, int *row_count, int is_first_batch);
 #endif

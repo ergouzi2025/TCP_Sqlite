@@ -8,25 +8,12 @@
 
 #include "utils/log/log.h"
 
-
-/*
- * Private database context.
- *
- * sqlite3 handle is intentionally hidden from other modules.
- */
+/* Keep the SQLite handle private to this module. */
 struct sqlite_db {
     sqlite3 *handle;
 };
 
-
-/*
- * Database schema.
- *
- * This function is private to sqlite_db.c.
- *
- * Upper-layer modules do not need to know
- * how the database tables are created.
- */
+/* Initialize tables and indexes required by the gateway. */
 static int sqlite_db_init_schema(sqlite_db_t *db)
 {
     static const char *schema_sql =
@@ -45,20 +32,12 @@ static int sqlite_db_init_schema(sqlite_db_t *db)
 
     char *error_message = NULL;
 
-    int rc = sqlite3_exec(
-        db->handle,
-        schema_sql,
-        NULL,
-        NULL,
-        &error_message
-    );
+    int rc = sqlite3_exec(db->handle, schema_sql, NULL, NULL, &error_message);
 
     if (rc != SQLITE_OK) {
 
-        log_error(
-            "Failed to initialize database schema: %s",
-            error_message ? error_message : "unknown error"
-        );
+        log_error("Failed to initialize database schema: %s",
+                  error_message ? error_message : "unknown error");
 
         sqlite3_free(error_message);
 
@@ -71,9 +50,7 @@ static int sqlite_db_init_schema(sqlite_db_t *db)
 }
 
 
-/*
- * Open or create database.
- */
+/* Open or create the database. */
 sqlite_db_t *sqlite_db_open(const char *db_path)
 {
     sqlite_db_t *db = NULL;
@@ -85,10 +62,7 @@ sqlite_db_t *sqlite_db_open(const char *db_path)
     }
 
 
-    /*
-     * Allocate database context.
-     */
-    db = malloc(sizeof(*db));
+    db = calloc(1, sizeof(*db));
 
     if (db == NULL) {
         log_error("Failed to allocate sqlite_db_t");
@@ -96,24 +70,13 @@ sqlite_db_t *sqlite_db_open(const char *db_path)
         return NULL;
     }
 
-    db->handle = NULL;
-
-
-    /*
-     * Open database.
-     *
-     * If the database file does not exist,
-     * sqlite3_open() creates it automatically.
-     */
+    /* sqlite3_open creates the file when it does not exist. */
     int rc = sqlite3_open(db_path, &db->handle);
 
     if (rc != SQLITE_OK) {
 
-        log_error(
-            "Failed to open database '%s': %s",
-            db_path,
-            db->handle ? sqlite3_errmsg(db->handle) : "unknown error"
-        );
+        log_error("Failed to open database '%s': %s", db_path,
+                  db->handle ? sqlite3_errmsg(db->handle) : "unknown error");
 
         if (db->handle != NULL) {
             sqlite3_close(db->handle);
@@ -125,20 +88,13 @@ sqlite_db_t *sqlite_db_open(const char *db_path)
     }
 
 
-    /*
-     * Configure SQLite busy timeout.
-     *
-     * If the database is temporarily locked,
-     * SQLite will wait up to 1000 ms.
-     */
+    /* Wait briefly when another connection holds a lock. */
     rc = sqlite3_busy_timeout(db->handle, 1000);
 
     if (rc != SQLITE_OK) {
 
-        log_error(
-            "Failed to configure SQLite busy timeout: %s",
-            sqlite3_errmsg(db->handle)
-        );
+        log_error("Failed to configure SQLite busy timeout: %s",
+                  sqlite3_errmsg(db->handle));
 
         sqlite3_close(db->handle);
         free(db);
@@ -147,28 +103,16 @@ sqlite_db_t *sqlite_db_open(const char *db_path)
     }
 
 
-    /*
-     * Enable WAL mode.
-     *
-     * WAL improves concurrent read/write behavior
-     * and is suitable for the gateway architecture.
-     */
+    /* WAL improves concurrent read/write behavior. */
     char *error_message = NULL;
 
-    rc = sqlite3_exec(
-        db->handle,
-        "PRAGMA journal_mode=WAL;",
-        NULL,
-        NULL,
-        &error_message
-    );
+    rc = sqlite3_exec(db->handle, "PRAGMA journal_mode=WAL;", NULL, NULL,
+                      &error_message);
 
     if (rc != SQLITE_OK) {
 
-        log_error(
-            "Failed to enable WAL mode: %s",
-            error_message ? error_message : "unknown error"
-        );
+        log_error("Failed to enable WAL mode: %s",
+                  error_message ? error_message : "unknown error");
 
         sqlite3_free(error_message);
 
@@ -179,17 +123,7 @@ sqlite_db_t *sqlite_db_open(const char *db_path)
     }
 
 
-    /*
-     * Initialize database schema.
-     *
-     * This automatically creates:
-     *
-     *   sensor_data
-     *
-     * and:
-     *
-     *   idx_sensor_data_device_id
-     */
+    /* Create the table and index required by the gateway. */
     if (sqlite_db_init_schema(db) < 0) {
 
         log_error("Failed to initialize database schema");
@@ -207,17 +141,7 @@ sqlite_db_t *sqlite_db_open(const char *db_path)
 }
 
 
-/*
- * Insert sensor data.
- */
-int sqlite_db_insert_sensor(
-    sqlite_db_t *db,
-    const char *device_id,
-    double data_1,
-    double data_2,
-    double data_3,
-    double data_4
-)
+int sqlite_db_insert_sensor(sqlite_db_t *db, const char *device_id, double data_1, double data_2, double data_3, double data_4)
 {
     static const char *sql =
         "INSERT INTO sensor_data "
@@ -227,9 +151,6 @@ int sqlite_db_insert_sensor(
     sqlite3_stmt *stmt = NULL;
 
 
-    /*
-     * Validate parameters.
-     */
     if (db == NULL ||
         db->handle == NULL ||
         device_id == NULL ||
@@ -241,23 +162,12 @@ int sqlite_db_insert_sensor(
     }
 
 
-    /*
-     * Prepare SQL statement.
-     */
-    int rc = sqlite3_prepare_v2(
-        db->handle,
-        sql,
-        -1,
-        &stmt,
-        NULL
-    );
+    int rc = sqlite3_prepare_v2(db->handle, sql, -1, &stmt, NULL);
 
     if (rc != SQLITE_OK) {
 
-        log_error(
-            "Failed to prepare insert statement: %s",
-            sqlite3_errmsg(db->handle)
-        );
+        log_error("Failed to prepare insert statement: %s",
+                  sqlite3_errmsg(db->handle));
 
         return -1;
     }
@@ -274,13 +184,7 @@ int sqlite_db_insert_sensor(
      *   4 -> data_3
      *   5 -> data_4
      */
-    rc = sqlite3_bind_text(
-        stmt,
-        1,
-        device_id,
-        -1,
-        SQLITE_TRANSIENT
-    );
+    rc = sqlite3_bind_text(stmt, 1, device_id, -1, SQLITE_TRANSIENT);
 
     if (rc != SQLITE_OK) {
         log_error("Failed to bind device_id");
@@ -325,17 +229,12 @@ int sqlite_db_insert_sensor(
     }
 
 
-    /*
-     * Execute INSERT.
-     */
     rc = sqlite3_step(stmt);
 
     if (rc != SQLITE_DONE) {
 
-        log_error(
-            "Failed to insert sensor data: %s",
-            sqlite3_errmsg(db->handle)
-        );
+        log_error("Failed to insert sensor data: %s",
+                  sqlite3_errmsg(db->handle));
 
         sqlite3_finalize(stmt);
 
@@ -343,9 +242,6 @@ int sqlite_db_insert_sensor(
     }
 
 
-    /*
-     * Release prepared statement.
-     */
     sqlite3_finalize(stmt);
 
     // log_debug(
@@ -357,14 +253,7 @@ int sqlite_db_insert_sensor(
 }
 
 
-/*
- * Get minimum and maximum record ID.
- */
-int sqlite_db_get_id_range(
-    sqlite_db_t *db,
-    int *min_id,
-    int *max_id
-)
+int sqlite_db_get_id_range(sqlite_db_t *db, int *min_id, int *max_id)
 {
     static const char *sql =
         "SELECT MIN(id), MAX(id) "
@@ -384,46 +273,26 @@ int sqlite_db_get_id_range(
     }
 
 
-    /*
-     * Default result for an empty table.
-     */
     *min_id = 0;
     *max_id = 0;
 
 
-    /*
-     * Prepare statement.
-     */
-    int rc = sqlite3_prepare_v2(
-        db->handle,
-        sql,
-        -1,
-        &stmt,
-        NULL
-    );
+    int rc = sqlite3_prepare_v2(db->handle, sql, -1, &stmt, NULL);
 
     if (rc != SQLITE_OK) {
 
-        log_error(
-            "Failed to prepare ID range query: %s",
-            sqlite3_errmsg(db->handle)
-        );
+        log_error("Failed to prepare ID range query: %s",
+                  sqlite3_errmsg(db->handle));
 
         return -1;
     }
 
 
-    /*
-     * Execute query.
-     */
     rc = sqlite3_step(stmt);
 
     if (rc != SQLITE_ROW) {
 
-        log_error(
-            "Failed to query ID range: %s",
-            sqlite3_errmsg(db->handle)
-        );
+        log_error("Failed to query ID range: %s", sqlite3_errmsg(db->handle));
 
         sqlite3_finalize(stmt);
 
@@ -431,10 +300,7 @@ int sqlite_db_get_id_range(
     }
 
 
-    /*
-     * MIN(id) / MAX(id) return NULL
-     * when the table is empty.
-     */
+    /* MIN/MAX return NULL when the table is empty. */
     if (sqlite3_column_type(stmt, 0) != SQLITE_NULL) {
         *min_id = sqlite3_column_int(stmt, 0);
     }
@@ -450,22 +316,8 @@ int sqlite_db_get_id_range(
 }
 
 
-/*
- * Query one batch of sensor data.
- *
- * Records are queried in ascending ID order.
- * At most SQLITE_DB_QUERY_BATCH_SIZE records are returned.
- */
-int sqlite_db_query_next_batch(
-    sqlite_db_t *db,
-    int last_id,
-    int end_id,
-    char *buffer,
-    size_t buffer_size,
-    int *next_id,
-    int *row_count,
-    int is_first_batch
-)
+/* Query one ascending-ID batch after last_id and through end_id. */
+int sqlite_db_query_next_batch(sqlite_db_t *db, int last_id, int end_id, char *buffer, size_t buffer_size, int *next_id, int *row_count, int is_first_batch)
 {
     static const char *sql =
         "SELECT "
@@ -485,14 +337,10 @@ int sqlite_db_query_next_batch(
     sqlite3_stmt *stmt = NULL;
 
     size_t used = 0;
-
     int count = 0;
     int current_id = last_id;
 
 
-    /*
-     * Validate parameters.
-     */
     if (db == NULL ||
         db->handle == NULL ||
         buffer == NULL ||
@@ -508,48 +356,24 @@ int sqlite_db_query_next_batch(
     }
 
 
-    /*
-     * Initialize output values.
-     */
     *next_id = last_id;
     *row_count = 0;
 
     buffer[0] = '\0';
 
 
-    /*
-     * Prepare SQL statement.
-     */
-    int rc = sqlite3_prepare_v2(
-        db->handle,
-        sql,
-        -1,
-        &stmt,
-        NULL
-    );
+    int rc = sqlite3_prepare_v2(db->handle, sql, -1, &stmt, NULL);
 
     if (rc != SQLITE_OK) {
 
-        log_error(
-            "Failed to prepare batch query: %s",
-            sqlite3_errmsg(db->handle)
-        );
+        log_error("Failed to prepare batch query: %s",
+                  sqlite3_errmsg(db->handle));
 
         return -1;
     }
 
 
-    /*
-     * Bind last_id.
-     *
-     * Only records with ID greater than last_id
-     * will be returned.
-     */
-    rc = sqlite3_bind_int(
-        stmt,
-        1,
-        last_id
-    );
+    rc = sqlite3_bind_int(stmt, 1, last_id);
 
     if (rc != SQLITE_OK) {
 
@@ -561,14 +385,7 @@ int sqlite_db_query_next_batch(
     }
 
 
-    /*
-     * Bind end_id.
-     */
-    rc = sqlite3_bind_int(
-        stmt,
-        2,
-        end_id
-    );
+    rc = sqlite3_bind_int(stmt, 2, end_id);
 
     if (rc != SQLITE_OK) {
 
@@ -580,15 +397,7 @@ int sqlite_db_query_next_batch(
     }
 
 
-    /*
-     * Limit the number of records returned
-     * by one query.
-     */
-    rc = sqlite3_bind_int(
-        stmt,
-        3,
-        SQLITE_DB_QUERY_BATCH_SIZE
-    );
+    rc = sqlite3_bind_int(stmt, 3, SQLITE_DB_QUERY_BATCH_SIZE);
 
     if (rc != SQLITE_OK) {
 
@@ -600,9 +409,6 @@ int sqlite_db_query_next_batch(
     }
 
 
-    /*
-     * Output table header only for the first batch.
-     */
     if (is_first_batch) {
 
         int written = snprintf(
@@ -654,9 +460,7 @@ int sqlite_db_query_next_batch(
             sqlite3_column_text(stmt, 6);
 
 
-        /*
-         * sqlite3_column_text() can theoretically return NULL.
-         */
+        /* SQLite text columns may be NULL. */
         if (device_id == NULL) {
             device_id = (const unsigned char *)"";
         }
@@ -666,9 +470,6 @@ int sqlite_db_query_next_batch(
         }
 
 
-        /*
-         * Format one record into the output buffer.
-         */
         int written = snprintf(
             buffer + used,
             buffer_size - used,
@@ -703,15 +504,10 @@ int sqlite_db_query_next_batch(
     }
 
 
-    /*
-     * SQLITE_DONE means the query completed normally.
-     */
     if (rc != SQLITE_DONE) {
 
-        log_error(
-            "Failed while querying sensor data: %s",
-            sqlite3_errmsg(db->handle)
-        );
+        log_error("Failed while querying sensor data: %s",
+                  sqlite3_errmsg(db->handle));
 
         sqlite3_finalize(stmt);
 
@@ -722,18 +518,12 @@ int sqlite_db_query_next_batch(
     sqlite3_finalize(stmt);
 
 
-    /*
-     * Return batch information.
-     */
     *next_id = current_id;
     *row_count = count;
 
     return 0;
 }
 
-/*
- * Close database.
- */
 void sqlite_db_close(sqlite_db_t *db)
 {
     if (db == NULL) {
@@ -742,7 +532,6 @@ void sqlite_db_close(sqlite_db_t *db)
 
 
     if (db->handle != NULL) {
-
         sqlite3_close(db->handle);
 
         db->handle = NULL;

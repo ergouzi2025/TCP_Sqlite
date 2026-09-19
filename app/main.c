@@ -7,13 +7,7 @@
 #include "storage/sqlite/sqlite_db.h"
 #include "transport/tcp/tcp_server.h"
 
-
 #define OUTPUT_BUFFER_SIZE 4096
-
-
-/* ==============================
- * Gateway Output Handler
- * ============================== */
 
 /**
  * @brief Send gateway output to TCP client.
@@ -22,11 +16,7 @@
  * deliver normal responses and query batches
  * to the connected TCP client.
  */
-static int gateway_output_handler(
-    const char *data,
-    size_t length,
-    void *arg
-)
+static int gateway_output_handler(const char *data, size_t length, void *arg)
 {
     int client_fd = *(int *)arg;
 
@@ -34,16 +24,8 @@ static int gateway_output_handler(
         return -1;
     }
 
-    if (tcp_server_send(
-            client_fd,
-            data,
-            length) != 0) {
-
-        fprintf(
-            stderr,
-            "Failed to send gateway output: fd=%d\n",
-            client_fd
-        );
+    if (tcp_server_send(client_fd, data, length) != 0) {
+        fprintf(stderr, "Failed to send gateway output: fd=%d\n", client_fd);
 
         return -1;
     }
@@ -52,10 +34,6 @@ static int gateway_output_handler(
 }
 
 
-/* ==============================
- * TCP Client Handler
- * ============================== */
-
 /**
  * @brief Handle TCP client events.
  *
@@ -63,48 +41,25 @@ static int gateway_output_handler(
  * received data, and disconnection events
  * through this callback.
  */
-static int client_handler(
-    int client_fd,
-    tcp_client_event_t event,
-    const char *data,
-    size_t length,
-    void *arg
-)
+static int client_handler(int client_fd, tcp_client_event_t event, const char *data, size_t length, void *arg)
 {
     gateway_t *gateway = (gateway_t *)arg;
 
     char input[BUFFER_SIZE];
-    char output[OUTPUT_BUFFER_SIZE];
+    char output[OUTPUT_BUFFER_SIZE] = {0};
 
     if (gateway == NULL) {
         return -1;
     }
 
 
-    /* ==============================
-     * Client Connected
-     * ============================== */
-
     if (event == TCP_CLIENT_CONNECTED) {
+        const char *welcome = "TCP Sensor Gateway,Type HELP for available commands.\n";
 
-        const char *welcome =
-            "TCP Sensor Gateway,Type HELP for available commands.\n";
+        printf("Client connected: fd=%d\n", client_fd);
 
-        printf(
-            "Client connected: fd=%d\n",
-            client_fd
-        );
-
-        if (tcp_server_send(
-                client_fd,
-                welcome,
-                strlen(welcome)) != 0) {
-
-            fprintf(
-                stderr,
-                "Failed to send welcome message: fd=%d\n",
-                client_fd
-            );
+        if (tcp_server_send(client_fd, welcome, strlen(welcome)) != 0) {
+            fprintf(stderr, "Failed to send welcome message: fd=%d\n", client_fd);
 
             return -1;
         }
@@ -113,24 +68,11 @@ static int client_handler(
     }
 
 
-    /* ==============================
-     * Client Disconnected
-     * ============================== */
-
     if (event == TCP_CLIENT_DISCONNECTED) {
-
-        printf(
-            "Client disconnected: fd=%d\n",
-            client_fd
-        );
-
+        printf("Client disconnected: fd=%d\n", client_fd);
         return 0;
     }
 
-
-    /* ==============================
-     * Client Data
-     * ============================== */
 
     if (event == TCP_CLIENT_DATA) {
 
@@ -143,27 +85,14 @@ static int client_handler(
          * Copy it into a local buffer and add '\0'.
          */
         if (length >= sizeof(input)) {
-
-            fprintf(
-                stderr,
-                "Received data is too large\n"
-            );
-
+            fprintf(stderr, "Received data is too large\n");
             return -1;
         }
 
-        memcpy(
-            input,
-            data,
-            length
-        );
-
+        memcpy(input, data, length);
         input[length] = '\0';
 
-        printf(
-            "Received: %s\n",
-            input
-        );
+        printf("Received: %s\n", input);
 
         /*
          * Process command through gateway.
@@ -174,26 +103,13 @@ static int client_handler(
          * QUERY results are delivered batch by
          * batch through gateway_output_handler().
          */
-        if (gateway_process(
-                gateway,
-                input,
-                output,
-                sizeof(output),
-                gateway_output_handler,
-                &client_fd) != 0) {
+        if (gateway_process(gateway, input, output, sizeof(output),
+                    gateway_output_handler, &client_fd) != 0) {
 
             const char *error_response = "ERROR\n";
 
-            if (tcp_server_send(
-                    client_fd,
-                    error_response,
-                    strlen(error_response)) != 0) {
-
-                fprintf(
-                    stderr,
-                    "Failed to send error response: fd=%d\n",
-                    client_fd
-                );
+            if (tcp_server_send(client_fd, error_response, strlen(error_response)) != 0) {
+                fprintf(stderr, "Failed to send error response: fd=%d\n", client_fd);
             }
 
             return -1;
@@ -207,17 +123,8 @@ static int client_handler(
          * the normal output buffer and are sent here.
          */
         if (output[0] != '\0') {
-
-            if (tcp_server_send(
-                    client_fd,
-                    output,
-                    strlen(output)) != 0) {
-
-                fprintf(
-                    stderr,
-                    "Failed to send response: fd=%d\n",
-                    client_fd
-                );
+            if (tcp_server_send(client_fd, output, strlen(output)) != 0) {
+                fprintf(stderr, "Failed to send response: fd=%d\n", client_fd);
 
                 return -1;
             }
@@ -227,17 +134,8 @@ static int client_handler(
     }
 
 
-    /* ==============================
-     * Unknown Event
-     * ============================== */
-
     return -1;
 }
-
-
-/* ==============================
- * Main
- * ============================== */
 
 int main(int argc, char *argv[])
 {
@@ -248,21 +146,11 @@ int main(int argc, char *argv[])
     gateway_t *gateway = NULL;
     tcp_server_t *server = NULL;
 
-
-    /*
-     * 0. Parse command-line arguments.
-     */
+    /* Parse command-line arguments. */
     if (argc != 3) {
 
-        printf(
-            "Usage: %s <ip> <port>\n",
-            argv[0]
-        );
-
-        printf(
-            "Example: %s 192.168.171.132 8888\n",
-            argv[0]
-        );
+        printf("Usage: %s <ip> <port>\n", argv[0]);
+        printf("Example: %s 192.168.171.132 8888\n", argv[0]);
 
         return EXIT_FAILURE;
     }
@@ -271,50 +159,30 @@ int main(int argc, char *argv[])
     server_port = atoi(argv[2]);
 
     if (server_port <= 0 || server_port > 65535) {
-
-        fprintf(
-            stderr,
-            "Invalid port: %s\n",
-            argv[2]
-        );
-
+        fprintf(stderr, "Invalid port: %s\n", argv[2]);
         return EXIT_FAILURE;
     }
 
 
-    /*
-     * 1. Open SQLite database.
-     */
+    /* Open the SQLite database. */
     db = sqlite_db_open(DB_FILE);
 
     if (db == NULL) {
 
-        fprintf(
-            stderr,
-            "Failed to open database: %s\n",
-            DB_FILE
-        );
+        fprintf(stderr, "Failed to open database: %s\n", DB_FILE);
 
         return EXIT_FAILURE;
     }
 
-    printf(
-        "Database opened: %s\n",
-        DB_FILE
-    );
+    printf("Database opened: %s\n", DB_FILE);
 
 
-    /*
-     * 2. Create gateway.
-     */
+    /* Create the gateway. */
     gateway = gateway_create(db);
 
     if (gateway == NULL) {
 
-        fprintf(
-            stderr,
-            "Failed to create gateway\n"
-        );
+        fprintf(stderr, "Failed to create gateway\n");
 
         sqlite_db_close(db);
 
@@ -322,20 +190,12 @@ int main(int argc, char *argv[])
     }
 
 
-    /*
-     * 3. Create TCP server.
-     */
-    server = tcp_server_create(
-        server_ip,
-        server_port
-    );
+    /* Create the TCP server. */
+    server = tcp_server_create(server_ip, server_port);
 
     if (server == NULL) {
 
-        fprintf(
-            stderr,
-            "Failed to create TCP server\n"
-        );
+        fprintf(stderr, "Failed to create TCP server\n");
 
         gateway_destroy(gateway);
         sqlite_db_close(db);
@@ -344,18 +204,10 @@ int main(int argc, char *argv[])
     }
 
 
-    /*
-     * 4. Register gateway as TCP client handler.
-     */
-    if (tcp_server_set_handler(
-            server,
-            client_handler,
-            gateway) != 0) {
+    /* Register the gateway as the TCP client handler. */
+    if (tcp_server_set_handler(server, client_handler, gateway) != 0) {
 
-        fprintf(
-            stderr,
-            "Failed to set TCP handler\n"
-        );
+        fprintf(stderr, "Failed to set TCP handler\n");
 
         tcp_server_destroy(server);
         gateway_destroy(gateway);
@@ -365,41 +217,23 @@ int main(int argc, char *argv[])
     }
 
 
-    printf(
-        "Server: %s:%d\n",
-        server_ip,
-        server_port
-    );
-
-    printf(
-        "Waiting for clients...\n"
-    );
+    printf("Server: %s:%d\n", server_ip, server_port);
+    printf("Waiting for clients...\n");
 
 
-    /*
-     * 5. Start TCP server.
-     *
-     * tcp_server_start() blocks here.
-     */
+    /* Start the server; this call blocks until the server stops. */
     if (tcp_server_start(server) != 0) {
 
-        fprintf(
-            stderr,
-            "TCP server stopped with error\n"
-        );
+        fprintf(stderr, "TCP server stopped with error\n");
     }
 
 
-    /*
-     * 6. Cleanup.
-     */
+    /* Release resources in reverse creation order. */
     tcp_server_destroy(server);
     gateway_destroy(gateway);
     sqlite_db_close(db);
 
-    printf(
-        "Server stopped.\n"
-    );
+    printf("Server stopped.\n");
 
     return EXIT_SUCCESS;
 }

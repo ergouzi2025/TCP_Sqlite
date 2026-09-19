@@ -4,16 +4,7 @@
 #include <stddef.h>
 
 
-/* ==============================
- * TCP Server
- * ============================== */
-
 typedef struct tcp_server tcp_server_t;
-
-
-/* ==============================
- * Client Event
- * ============================== */
 
 typedef enum {
     TCP_CLIENT_CONNECTED = 0,
@@ -21,10 +12,6 @@ typedef enum {
     TCP_CLIENT_DISCONNECTED
 } tcp_client_event_t;
 
-
-/* ==============================
- * Client Handler
- * ============================== */
 
 /**
  * @brief Handle TCP client events.
@@ -42,18 +29,8 @@ typedef enum {
  *
  * @return 0 on success, -1 on failure.
  */
-typedef int (*tcp_client_handler_t)(
-    int client_fd,
-    tcp_client_event_t event,
-    const char *data,
-    size_t length,
-    void *arg
-);
+typedef int (*tcp_client_handler_t)(int client_fd, tcp_client_event_t event, const char *data, size_t length, void *arg);
 
-
-/* ==============================
- * Create / Destroy
- * ============================== */
 
 /**
  * @brief Create a TCP server.
@@ -64,10 +41,7 @@ typedef int (*tcp_client_handler_t)(
  * @return TCP server pointer on success,
  *         NULL on failure.
  */
-tcp_server_t *tcp_server_create(
-    const char *ip,
-    int port
-);
+tcp_server_t *tcp_server_create(const char *ip, int port);
 
 
 /**
@@ -77,14 +51,8 @@ tcp_server_t *tcp_server_create(
  *
  * @param server TCP server pointer.
  */
-void tcp_server_destroy(
-    tcp_server_t *server
-);
+void tcp_server_destroy(tcp_server_t *server);
 
-
-/* ==============================
- * Callback
- * ============================== */
 
 /**
  * @brief Set client event handler.
@@ -95,16 +63,8 @@ void tcp_server_destroy(
  *
  * @return 0 on success, -1 on failure.
  */
-int tcp_server_set_handler(
-    tcp_server_t *server,
-    tcp_client_handler_t handler,
-    void *arg
-);
+int tcp_server_set_handler(tcp_server_t *server, tcp_client_handler_t handler, void *arg);
 
-
-/* ==============================
- * Server Control
- * ============================== */
 
 /**
  * @brief Start TCP server.
@@ -117,9 +77,7 @@ int tcp_server_set_handler(
  *
  * @return 0 on normal stop, -1 on failure.
  */
-int tcp_server_start(
-    tcp_server_t *server
-);
+int tcp_server_start(tcp_server_t *server);
 
 
 /**
@@ -130,14 +88,8 @@ int tcp_server_start(
  *
  * @param server TCP server pointer.
  */
-void tcp_server_stop(
-    tcp_server_t *server
-);
+void tcp_server_stop(tcp_server_t *server);
 
-
-/* ==============================
- * Data Transmission
- * ============================== */
 
 /**
  * @brief Send data to a TCP client.
@@ -151,11 +103,7 @@ void tcp_server_stop(
  *
  * @return 0 on success, -1 on failure.
  */
-int tcp_server_send(
-    int client_fd,
-    const char *data,
-    size_t length
-);
+int tcp_server_send(int client_fd, const char *data, size_t length);
 
 
 #endif

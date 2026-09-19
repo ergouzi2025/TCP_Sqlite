@@ -3,10 +3,8 @@
 
 #include <stddef.h>
 
-/* ==============================
- * TCP Command Type
- * ============================== */
 
+/* Commands supported by the TCP application protocol. */
 typedef enum {
     TCP_CMD_INVALID = 0,
     TCP_CMD_SENSOR_DATA,
@@ -15,51 +13,26 @@ typedef enum {
 } tcp_command_type_t;
 
 
-/* ==============================
- * Sensor Data Command
- * ============================== */
-
 typedef struct {
     char device_id[64];
-
     double data_1;
     double data_2;
     double data_3;
     double data_4;
-
 } sensor_data_t;
-
-
-/* ==============================
- * Query Command
- * ============================== */
 
 typedef struct {
     int start_id;
     int end_id;
-
 } query_command_t;
-
-
-/* ==============================
- * TCP Command
- * ============================== */
 
 typedef struct {
     tcp_command_type_t type;
-
     union {
         sensor_data_t sensor;
         query_command_t query;
-
     } data;
-
 } tcp_command_t;
-
-
-/* ==============================
- * Parser
- * ============================== */
 
 /**
  * @brief Parse a TCP application command.
@@ -74,9 +47,6 @@ typedef struct {
  *
  * @return 0 on success, -1 on failure.
  */
-int tcp_parser_parse(
-    const char *input,
-    tcp_command_t *command
-);
+int tcp_parser_parse(const char *input, tcp_command_t *command);
 
 #endif

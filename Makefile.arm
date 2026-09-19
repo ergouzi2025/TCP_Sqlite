@@ -1,16 +1,8 @@
-# ==========================================
-# i.MX6ULL ARM Cross Compile Makefile
-# ==========================================
+# i.MX6ULL ARM cross-compile Makefile
 
 # Cross compiler
 CROSS_COMPILE = arm-linux-gnueabihf-
 CC = $(CROSS_COMPILE)gcc
-
-
-# ==========================================
-# ARM SQLite
-# ==========================================
-
 SQLITE_ROOT = ./sqlite_arm_lib/sqlite3-arm
 
 CFLAGS = -Wall -Wextra -std=c11 \
@@ -20,19 +12,7 @@ CFLAGS = -Wall -Wextra -std=c11 \
 LDFLAGS = -L$(SQLITE_ROOT)/lib \
           -lsqlite3 \
           -lpthread
-
-
-# ==========================================
-# Target
-# ==========================================
-
 TARGET = tcp_sqlite_server_arm
-
-
-# ==========================================
-# Source Files
-# ==========================================
-
 SRCS = \
 	app/main.c \
 	core/gateway.c \
@@ -40,37 +20,19 @@ SRCS = \
 	protocol/tcp/tcp_parser.c \
 	service/sensor_service.c \
 	service/data_service.c \
-	storage/sqlite/sqlite_db.c  \
-    utils/log/log.o
-
-
+	storage/sqlite/sqlite_db.c \
+	utils/log/log.c
 OBJS = $(SRCS:.c=.o)
-
-
-# ==========================================
-# Build
-# ==========================================
-
 .PHONY: all clean
 
 all: $(TARGET)
-
-
 $(TARGET): $(OBJS)
 	$(CC) $(OBJS) -o $@ $(LDFLAGS)
 
 
-# ==========================================
-# Compile
-# ==========================================
-
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
-
-# ==========================================
-# Clean
-# ==========================================
 
 clean:
 	rm -f $(OBJS)

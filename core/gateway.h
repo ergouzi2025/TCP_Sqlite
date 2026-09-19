@@ -7,13 +7,7 @@
 #include "service/sensor_service.h"
 #include "service/data_service.h"
 
-
-/* ==============================
- * Gateway
- * ============================== */
-
 typedef struct gateway gateway_t;
-
 
 /**
  * @brief Output callback used by gateway.
@@ -28,16 +22,8 @@ typedef struct gateway gateway_t;
  *
  * @return 0 on success, -1 on failure.
  */
-typedef int (*gateway_output_handler_t)(
-    const char *data,
-    size_t length,
-    void *arg
-);
+typedef int (*gateway_output_handler_t)(const char *data, size_t length, void *arg);
 
-
-/* ==============================
- * Create / Destroy
- * ============================== */
 
 /**
  * @brief Create gateway.
@@ -47,9 +33,7 @@ typedef int (*gateway_output_handler_t)(
  * @return Gateway pointer on success,
  *         NULL on failure.
  */
-gateway_t *gateway_create(
-    sqlite_db_t *db
-);
+gateway_t *gateway_create(sqlite_db_t *db);
 
 
 /**
@@ -59,14 +43,8 @@ gateway_t *gateway_create(
  *
  * @param gateway Gateway pointer.
  */
-void gateway_destroy(
-    gateway_t *gateway
-);
+void gateway_destroy(gateway_t *gateway);
 
-
-/* ==============================
- * Command Processing
- * ============================== */
 
 /**
  * @brief Process one TCP command.
@@ -94,14 +72,6 @@ void gateway_destroy(
  *
  * @return 0 on success, -1 on failure.
  */
-int gateway_process(
-    gateway_t *gateway,
-    const char *input,
-    char *output,
-    size_t output_size,
-    gateway_output_handler_t output_handler,
-    void *output_arg
-);
-
+int gateway_process(gateway_t *gateway, const char *input, char *output, size_t output_size, gateway_output_handler_t output_handler, void *output_arg);
 
 #endif
