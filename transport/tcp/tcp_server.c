@@ -170,7 +170,6 @@ int tcp_server_start(tcp_server_t *server)
         return -1;
     }
 
-
     int server_fd = socket(
         AF_INET,
         SOCK_STREAM,
@@ -178,12 +177,7 @@ int tcp_server_start(tcp_server_t *server)
     );
 
     if (server_fd < 0) {
-
-        log_error(
-            "socket() failed: %s",
-            strerror(errno)
-        );
-
+        log_error("socket() failed: %s", strerror(errno));
         return -1;
     }
 

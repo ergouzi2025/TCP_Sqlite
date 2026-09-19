@@ -19,7 +19,6 @@ sensor_service_t *sensor_service_create(sqlite_db_t *db)
         return NULL;
     }
 
-
     sensor_service_t *service = calloc(1, sizeof(*service));
 
     if (service == NULL) {
@@ -30,13 +29,8 @@ sensor_service_t *sensor_service_create(sqlite_db_t *db)
         return NULL;
     }
 
-
     service->db = db;
-
-    log_info(
-        "Sensor service created"
-    );
-
+    log_info("Sensor service created");
     return service;
 }
 

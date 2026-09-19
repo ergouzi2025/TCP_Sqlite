@@ -176,19 +176,14 @@ int main(int argc, char *argv[])
 
     printf("Database opened: %s\n", DB_FILE);
 
-
     /* Create the gateway. */
     gateway = gateway_create(db);
 
     if (gateway == NULL) {
-
         fprintf(stderr, "Failed to create gateway\n");
-
         sqlite_db_close(db);
-
         return EXIT_FAILURE;
     }
-
 
     /* Create the TCP server. */
     server = tcp_server_create(server_ip, server_port);
@@ -223,7 +218,6 @@ int main(int argc, char *argv[])
 
     /* Start the server; this call blocks until the server stops. */
     if (tcp_server_start(server) != 0) {
-
         fprintf(stderr, "TCP server stopped with error\n");
     }
 

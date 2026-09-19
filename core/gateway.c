@@ -185,7 +185,6 @@ int gateway_process(gateway_t *gateway, const char *input, char *output, size_t 
 
     case TCP_CMD_SENSOR_DATA:
         if (sensor_service_handle_data(gateway->sensor_service, &command.data.sensor) != 0) {
-
             return -1;
         }
 
